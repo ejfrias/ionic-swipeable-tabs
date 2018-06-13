@@ -1,0 +1,41 @@
+swipeable-tabs {
+
+	&.slides-height-auto {
+		ion-slides.slides {
+			height: auto !important;
+		}
+	}
+
+	.swipeable-tabs-header {
+		position: relative;
+
+		.col {
+			button {
+				font-weight: normal;
+			}
+
+			&.active {
+				button {
+					color: color($colors, primary);
+				}
+			}
+		}
+
+		.active-tab-indicator {
+			background-color: color($colors, primary);
+			height: 2px;
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			transition-property: left;
+			transition-duration: 350ms;
+			transition-timing-function: cubic-bezier(.36, .66, .04, 1);
+			width: 0px;
+
+			&.no-transition {
+				transition-duration: 0s;
+			}
+		}
+	}
+
+}
