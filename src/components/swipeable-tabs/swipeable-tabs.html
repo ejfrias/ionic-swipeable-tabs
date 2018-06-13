@@ -1,0 +1,12 @@
+<div class="swipeable-tabs-header">
+	<ion-grid no-padding>
+		<ion-row nowrap>
+			<ion-col text-center *ngFor="let tab of tabs; let i = index" [class.active]="activeIndex == i">
+				<button ion-button clear full text-capitalize no-margin color="dark" (click)="slideTo(i)">{{ tab }}</button>
+			</ion-col>
+		</ion-row>
+	</ion-grid>
+	<div class="active-tab-indicator"></div>
+</div>
+
+<ng-content></ng-content>
