@@ -8,9 +8,13 @@ Ionic framework 3.x.x and above
 
 ### How to use
 Make sure you have the latest version of ionic `npm install -g ionic`.
+
 Start an Ionic app `ionic start ionic-swipeable-tabs blank`.
+
 Create a placeholder component `ionic g component SwipeableTabs` and copy the `/src/components/swipeable-tabs/` folder from this repo to the app that you just created.
+
 Make sure that the component is properly imported in `/src/components/components.module.ts`.
+
 Import the component's module to `/src/app/page.module.ts`. Also, make sure that your app is configured to use the lazy loading feature!
 ```javascript
 ...
@@ -50,6 +54,7 @@ export class HomePage {
 		this.tabs = ['Tab 1', 'Tab 2', 'Tab 3', 'Tab 4'];
 		this.slides = ['Slide 1 content', 'Slide 2 content', 'Slide 3 content', 'Slide 4 content'];
 	}
+}
 ...
 ```
 That's it!
