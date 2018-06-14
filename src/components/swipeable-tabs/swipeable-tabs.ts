@@ -12,15 +12,12 @@ export class SwipeableTabsComponent implements OnInit, OnDestroy {
 	@ContentChild(Slides) slides: Slides;
 	@HostListener('window:resize') onWindowResize() {
 		//update the active tab indicator when the window has been resized
-		this.updateTabWidth();
+		this.setActiveTab();
 	}
 
 	public activeTabIndicator: HTMLElement;
-	public tabsEl: Array<HTMLElement>;
-	public tabsHeader: HTMLElement;
-	public tabWidth: number;
+	public tabsEl: Array<HTMLElement> = [];
 	public slideWidth: number;
-	public slideContainer: HTMLElement;
 	public slideChanged$;
 
 	constructor(
@@ -29,6 +26,15 @@ export class SwipeableTabsComponent implements OnInit, OnDestroy {
 	) {}
 
 	ngOnInit() {}
+
+	/**
+	 * Update the values
+	 */
+	ngOnChanges() {
+		setTimeout(() => {
+			this.setActiveTab();
+		}, 100);
+	}
 
 	/**
 	 * All input will be initilized after this function so
@@ -40,38 +46,43 @@ export class SwipeableTabsComponent implements OnInit, OnDestroy {
 			this.renderer.addClass(this.el.nativeElement, 'slides-height-auto');
 		}
 	
-		//get the needed elements
-		this.tabsHeader = this.el.nativeElement.querySelector('.swipeable-tabs-header');
+		//get the active tab indicator dom element
 		this.activeTabIndicator = this.el.nativeElement.querySelector('.active-tab-indicator');
-		this.slideContainer = this.el.nativeElement.querySelector('.swiper-container');
-
-		//get each tab element
-		this.getTabs();
-
-		//set the active tab indicator width
-		this.updateTabWidth();
 
 		//set active tab
-		if (this.activeIndex != 0) {
+		(async () => {
+			//get each tab element
+			await new Promise(resolve => {
+				setTimeout(() => {
+					this.getTabs();
+					resolve(true);
+				}, 100);
+			});
+
+			if (this.activeIndex != 0) {
 			//make sure we run the commands in order
-			(async () => {
 				await this.renderer.addClass(this.activeTabIndicator, 'no-transition'); //remove the animation
 				await new Promise(resolve => {
 					setTimeout(() => {
 						this.slideTo(this.activeIndex, 0); //set initial slide
 						resolve(true);
-					}, 20);
+					}, 200);
 					
 				});
 
 				//bring back the animation
-				this.renderer.removeClass(this.activeTabIndicator, 'no-transition');
-			})();
-		}
+				await this.renderer.removeClass(this.activeTabIndicator, 'no-transition');
+			}
+			
+			//set the active tab indicator width
+			this.updateActiveTabIndicatorWidth();
+			this.updateSlidesHeight();
+		})();
 
 		//update the active tab indicator when the slide changes
 		this.slideChanged$ = this.slides.ionSlideWillChange.subscribe(event => {
-			this.setActiveTab(this.slides.getActiveIndex());
+			this.activeIndex = this.slides.getActiveIndex();
+			this.setActiveTab();
 		});
 	}
 
@@ -86,19 +97,9 @@ export class SwipeableTabsComponent implements OnInit, OnDestroy {
 	 * Get all tabs
 	 */
 	getTabs() {
-		setTimeout(() => {
-			this.tabsEl = this.el.nativeElement.querySelectorAll('.col');
-		});
-	}
-
-	/**
-	 * Set the active tab indicator same as the tab
-	 */
-	updateTabWidth() {
-		setTimeout(() => {
-			this.tabWidth = this.el.nativeElement.querySelector('.col').offsetWidth;
-			this.renderer.setStyle(this.activeTabIndicator, 'width', this.tabWidth + 'px');
-		});
+		do {
+			this.tabsEl = this.el.nativeElement.querySelectorAll('.swipeable-tabs-header .col');
+		} while (this.tabsEl.length == 0);
 	}
 
 	/**
@@ -108,7 +109,6 @@ export class SwipeableTabsComponent implements OnInit, OnDestroy {
 	 * @param duration (number) - duration of the transition (in ms)
 	 */
 	slideTo(index, duration: number = 500) {
-		this.activeIndex = index;
 		this.slides.slideTo(index, duration);
 	}
 
@@ -117,12 +117,23 @@ export class SwipeableTabsComponent implements OnInit, OnDestroy {
 	 * 
 	 * @param index (number) - the index number of the tab
 	 */
-	setActiveTab(index) {
-		let activeTab = typeof this.tabsEl[index] != 'undefined' ? this.tabsEl[index] : null;
+	async setActiveTab() {
+		await this.getTabs(); //make sure we have tab element
+		let activeTab = typeof this.tabsEl[this.activeIndex] != 'undefined' ? this.tabsEl[this.activeIndex] : null;
 
 		if (activeTab) {
-			this.activeIndex = index;
+			this.updateActiveTabIndicatorWidth();
 			this.updateTabIndicatorPosX(activeTab.offsetLeft);
+			this.updateSlidesHeight();
+		}
+	}
+
+	/**
+	 * Set the active tab indicator same as the tab
+	 */
+	updateActiveTabIndicatorWidth() {
+		if (typeof this.tabsEl[0] != 'undefined') {
+			this.renderer.setStyle(this.activeTabIndicator, 'width', this.tabsEl[0].offsetWidth + 'px');
 		}
 	}
 
@@ -133,5 +144,21 @@ export class SwipeableTabsComponent implements OnInit, OnDestroy {
 	 */
 	updateTabIndicatorPosX(xPos: number) {
 		this.renderer.setStyle(this.activeTabIndicator, 'left', xPos + 'px');
+	}
+
+	/**
+	 * Update the slide wrapper height same as the active slide when
+	 * the user set the slidesFullHeight to false
+	 * 
+	 * @param activeTab (object) - the dom element of the active tab
+	 */
+	updateSlidesHeight() {
+		if (String(this.slidesFullHeight).toLowerCase() == 'false') {
+			let slideHeight = this.slides._slides[this.activeIndex].querySelector('.slide-zoom').clientHeight;
+
+			if (slideHeight) {
+				this.renderer.setStyle(this.slides.container, 'height', slideHeight + 'px');
+			}
+		}
 	}
 }

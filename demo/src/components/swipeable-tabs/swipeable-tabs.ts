@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy, ElementRef, Renderer2, ContentChild, Output, EventEmitter, HostListener } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ElementRef, Renderer2, ContentChild, HostListener } from '@angular/core';
 import { Slides } from 'ionic-angular';
 
 @Component({
@@ -7,163 +7,158 @@ import { Slides } from 'ionic-angular';
 })
 export class SwipeableTabsComponent implements OnInit, OnDestroy {
 	@Input('tabs') tabs: Array<string>;
-	@Input('activeIndex') activeIndex: number;
+	@Input('activeIndex') activeIndex: number = 0;
 	@Input('slidesFullHeight') slidesFullHeight: any = true;
 	@ContentChild(Slides) slides: Slides;
 	@HostListener('window:resize') onWindowResize() {
-		this.updateTabWidth();
+		//update the active tab indicator when the window has been resized
+		this.setActiveTab();
 	}
 
 	public activeTabIndicator: HTMLElement;
-	public tabsEl: Array<HTMLElement>;
-	public tabsHeader: HTMLElement;
-	public tabWidth: number;
+	public tabsEl: Array<HTMLElement> = [];
 	public slideWidth: number;
-	public slideContainer: HTMLElement;
-	public slideDrag$;
 	public slideChanged$;
-	public slideMouseUp$;
-	public slideTouchEnd$;
 
 	constructor(
 		public el: ElementRef,
 		public renderer: Renderer2
-	) {
-		
-	}
+	) {}
 
 	ngOnInit() {}
 
+	/**
+	 * Update the values
+	 */
+	ngOnChanges() {
+		setTimeout(() => {
+			this.setActiveTab();
+		}, 100);
+	}
+
+	/**
+	 * All input will be initilized after this function so
+	 * we start setting up everything here
+	 */
 	ngAfterViewInit() {
-		if (!this.activeIndex) {
-			this.activeIndex = 0;
-		}
-		
+		//set the height of the slides
 		if (String(this.slidesFullHeight).toLowerCase() == 'false') {
 			this.renderer.addClass(this.el.nativeElement, 'slides-height-auto');
 		}
 	
-		this.tabsHeader = this.el.nativeElement.querySelector('.swipeable-tabs-header');
+		//get the active tab indicator dom element
 		this.activeTabIndicator = this.el.nativeElement.querySelector('.active-tab-indicator');
-		this.slideContainer = this.el.nativeElement.querySelector('.swiper-container');
 
 		//set active tab
-		if (this.activeIndex != 0) {
-			this.renderer.addClass(this.activeTabIndicator, 'no-transition'); //remove the animation
+		(async () => {
+			//get each tab element
+			await new Promise(resolve => {
+				setTimeout(() => {
+					this.getTabs();
+					resolve(true);
+				}, 100);
+			});
 
-			setTimeout(() => {
-				this.slideTo(this.activeIndex, 0);
-			}, 20);
+			if (this.activeIndex != 0) {
+			//make sure we run the commands in order
+				await this.renderer.addClass(this.activeTabIndicator, 'no-transition'); //remove the animation
+				await new Promise(resolve => {
+					setTimeout(() => {
+						this.slideTo(this.activeIndex, 0); //set initial slide
+						resolve(true);
+					}, 200);
+					
+				});
 
-			//bring back the animation
-			setTimeout(() => {
-				this.renderer.removeClass(this.activeTabIndicator, 'no-transition');
-			}, 200);
-		}
+				//bring back the animation
+				await this.renderer.removeClass(this.activeTabIndicator, 'no-transition');
+			}
+			
+			//set the active tab indicator width
+			this.updateActiveTabIndicatorWidth();
+			this.updateSlidesHeight();
+		})();
 
-		//get the tabs element
-		this.getTabs();
-
-		//set the tab width
-		this.updateTabWidth();
-
-		//listen to slide change event
+		//update the active tab indicator when the slide changes
 		this.slideChanged$ = this.slides.ionSlideWillChange.subscribe(event => {
-			//update the active tab indicator when the slide changes
-			this.setActiveTab(this.slides.getActiveIndex());
+			this.activeIndex = this.slides.getActiveIndex();
+			this.setActiveTab();
 		});
-		
-		/* TODO: update the active tab indicator position while swiping
-		//listen to slide drag event
-		this.slideDrag$ = this.slides.ionSlideDrag.subscribe(event => {
-			let container = event.container;
-			let translated = [];
-			let scrollPos = this.getPosX(container);
-			let speed = this.tabWidth / container.offsetWidth;
-			let indicatorPos = speed * Math.abs(scrollPos);
-
-			this.updateTabIndicatorPosX(indicatorPos);
-		});
-
-		//listen to mouse up event to revert back to original position
-		this.slideMouseUp$ = this.renderer.listen(this.slideContainer, 'mouseup', e => {
-			let activeSlideIndex = this.slides.getActiveIndex();
-			let containerWidth = this.slideContainer.offsetWidth;
-			let posX = this.getPosX(this.slideContainer); // + (activeSlideIndex * containerWidth) + this.tabWidth;
-
-			if (posX >= 0) {
-				this.updateTabIndicatorPosX(posX);
-			}
-		});
-
-		//listen to touchend event to revert back to original position
-		this.slideTouchEnd$ = this.renderer.listen(this.slideContainer, 'touchend', e => {
-			let activeSlideIndex = this.slides.getActiveIndex();
-			let containerWidth = this.slideContainer.offsetWidth;
-			let posX = this.getPosX(this.slideContainer); // + (activeSlideIndex * containerWidth) + this.tabWidth;
-
-			if (posX >= 0) {
-				this.updateTabIndicatorPosX(posX);
-			}
-		});
-		*/
 	}
 
+	/**
+	 * Destroy subscriptions
+	 */
 	ngOnDestroy() {
 		this.slideChanged$.unsubscribe();
-		/*
-		this.slideDrag$.unsubscribe();
-		this.slideMouseUp$.unsubscribe();
-		this.slideTouchEnd$.unsubscribe();
-		*/
 	}
 
+	/**
+	 * Get all tabs
+	 */
 	getTabs() {
-		setTimeout(() => {
-			this.tabsEl = this.el.nativeElement.querySelectorAll('.col');
-		});
+		do {
+			this.tabsEl = this.el.nativeElement.querySelectorAll('.swipeable-tabs-header .col');
+		} while (this.tabsEl.length == 0);
 	}
 
-	updateTabWidth() {
-		setTimeout(() => {
-			this.tabWidth = this.el.nativeElement.querySelector('.col').offsetWidth;
-			this.renderer.setStyle(this.activeTabIndicator, 'width', this.tabWidth + 'px');
-		});
-	}
-
+	/**
+	 * Set slide active index and transition to the specific slide
+	 * 
+	 * @param index (number) - the index number of the slide (starts from 0)
+	 * @param duration (number) - duration of the transition (in ms)
+	 */
 	slideTo(index, duration: number = 500) {
-		this.activeIndex = index;
 		this.slides.slideTo(index, duration);
 	}
 
-	setActiveTab(index) {
-		let activeTab = this.tabsEl[index];
+	/**
+	 * Set the active tab and move the active tab indicator
+	 * 
+	 * @param index (number) - the index number of the tab
+	 */
+	async setActiveTab() {
+		await this.getTabs(); //make sure we have tab element
+		let activeTab = typeof this.tabsEl[this.activeIndex] != 'undefined' ? this.tabsEl[this.activeIndex] : null;
 
 		if (activeTab) {
-			this.activeIndex = index;
+			this.updateActiveTabIndicatorWidth();
 			this.updateTabIndicatorPosX(activeTab.offsetLeft);
+			this.updateSlidesHeight();
 		}
 	}
 
+	/**
+	 * Set the active tab indicator same as the tab
+	 */
+	updateActiveTabIndicatorWidth() {
+		if (typeof this.tabsEl[0] != 'undefined') {
+			this.renderer.setStyle(this.activeTabIndicator, 'width', this.tabsEl[0].offsetWidth + 'px');
+		}
+	}
+
+	/**
+	 * Update the position of the active tab indicator
+	 * 
+	 * @param xPos (number) - the horizontal position
+	 */
 	updateTabIndicatorPosX(xPos: number) {
 		this.renderer.setStyle(this.activeTabIndicator, 'left', xPos + 'px');
 	}
 
-	getPosX(el: HTMLElement) {
-		let scrollPos = 0;
-		let translated = [];
-		let firstChild = <HTMLElement>el.firstChild;
+	/**
+	 * Update the slide wrapper height same as the active slide when
+	 * the user set the slidesFullHeight to false
+	 * 
+	 * @param activeTab (object) - the dom element of the active tab
+	 */
+	updateSlidesHeight() {
+		if (String(this.slidesFullHeight).toLowerCase() == 'false') {
+			let slideHeight = this.slides._slides[this.activeIndex].querySelector('.slide-zoom').clientHeight;
 
-		if (firstChild.style.transform) {
-			translated = firstChild.style.transform.split(/\w+\(|\);?/);
-			
-			//move the active tab indicator when the slide has been dragged
-			if (translated[1] && translated[1].length) {
-				translated = translated[1].split(/,\s?/g);
-				scrollPos = parseInt(translated[0]);
+			if (slideHeight) {
+				this.renderer.setStyle(this.slides.container, 'height', slideHeight + 'px');
 			}
 		}
-
-		return scrollPos;
 	}
 }

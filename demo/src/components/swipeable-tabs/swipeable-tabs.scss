@@ -3,6 +3,10 @@ swipeable-tabs {
 	&.slides-height-auto {
 		ion-slides.slides {
 			height: auto !important;
+
+			.swiper-slide {
+				align-items: flex-start;
+			}
 		}
 	}
 
@@ -34,6 +38,7 @@ swipeable-tabs {
 
 			&.no-transition {
 				transition-duration: 0s;
+				display: none;
 			}
 		}
 	}
