@@ -34,6 +34,7 @@ swipeable-tabs {
 
 			&.no-transition {
 				transition-duration: 0s;
+				display: none;
 			}
 		}
 	}
