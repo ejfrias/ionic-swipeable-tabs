@@ -16,6 +16,14 @@ swipeable-tabs {
 		.col {
 			button {
 				font-weight: normal;
+				padding: 0;
+				height: 4.2rem;
+				line-height: 1.2;
+
+				.button-inner {
+					height: calc(100% - 4px);
+					margin-top: 4px;
+				}
 			}
 
 			&.active {
