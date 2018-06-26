@@ -5,7 +5,7 @@ import { Slides } from 'ionic-angular';
 	selector: 'swipeable-tabs',
 	templateUrl: 'swipeable-tabs.html'
 })
-export class SwipeableTabsComponent implements OnInit, OnDestroy {
+export class SwipeableTabs implements OnInit, OnDestroy {
 	@Input('tabs') tabs: Array<string>;
 	@Input('activeIndex') activeIndex: number = 0;
 	@Input('slidesFullHeight') slidesFullHeight: any = true;
@@ -25,7 +25,12 @@ export class SwipeableTabsComponent implements OnInit, OnDestroy {
 		public renderer: Renderer2
 	) {}
 
-	ngOnInit() {}
+	ngOnInit() {
+		//make sure we have assigned the correct height
+		setTimeout(() => {
+			this.setActiveTab();
+		}, 1000);
+	}
 
 	/**
 	 * Update the values
@@ -97,9 +102,16 @@ export class SwipeableTabsComponent implements OnInit, OnDestroy {
 	 * Get all tabs
 	 */
 	getTabs() {
-		do {
-			this.tabsEl = this.el.nativeElement.querySelectorAll('.swipeable-tabs-header .col');
-		} while (this.tabsEl.length == 0);
+		this.tabsEl = [];
+		let tabsEl = this.el.nativeElement.querySelectorAll('.swipeable-tabs-header .col');
+
+		if (tabsEl.length) {
+			tabsEl.forEach(tab => {
+				if (tab.innerText.trim() != '') {
+					this.tabsEl.push(tab);
+				}
+			});
+		}
 	}
 
 	/**
@@ -154,10 +166,15 @@ export class SwipeableTabsComponent implements OnInit, OnDestroy {
 	 */
 	updateSlidesHeight() {
 		if (String(this.slidesFullHeight).toLowerCase() == 'false') {
-			let slideHeight = this.slides._slides[this.activeIndex].querySelector('.slide-zoom').clientHeight;
+			let slides = typeof this.slides._slides != 'undefined' ? this.slides._slides : [];
+			let activeSlide = typeof slides[this.activeIndex] != 'undefined' ? slides[this.activeIndex] : false;
 
-			if (slideHeight) {
-				this.renderer.setStyle(this.slides.container, 'height', slideHeight + 'px');
+			if (slides && activeSlide) {
+				let slideHeight = activeSlide.querySelector('.slide-zoom').clientHeight;
+
+				if (slideHeight) {
+					this.renderer.setStyle(this.slides.container, 'height', slideHeight + 'px');
+				}
 			}
 		}
 	}
